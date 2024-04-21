@@ -2,3 +2,4 @@ join.txt
 *.mp4
 dist/
 build/
+*.egg-info/
