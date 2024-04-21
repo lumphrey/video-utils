@@ -5,6 +5,16 @@ import re
 
 
 def collect_files(directory, pattern):
+    """
+    Collect files in a directory that match a specified pattern.
+    
+    Args:
+    - directory (str): The directory path to search for files.
+    - pattern (str): The regular expression pattern to match filenames.
+
+    Returns:
+    - list: A list of filenames that match the specified pattern.
+    """
     regex = re.compile(pattern)
     files = os.listdir(path=directory)
     print(files)
@@ -26,6 +36,7 @@ def main():
             print("Found " + filename)
             join_txt.write(f"file '{filename}'\n")
     
+    # Concatenate video files using ffmpeg
     ffmpeg_cmd = [
         "ffmpeg",
         "-f", "concat",
