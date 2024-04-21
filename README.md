@@ -1,1 +1,41 @@
-This script is a utility for splitting or concatenating video files using ffmpeg. It accepts command-line arguments to specify the start time for trimming (--from), the duration to trim from the end (--trim-end), and whether to keep all output files (--keep-all-files). The script collects files from the current directory that match a specific pattern (join\d+__.*\.mp4), creates a list of files to concatenate, and then uses ffmpeg to concatenate them into a single output file. If trimming is specified, it also trims the output file accordingly. Finally, it renames processed files and cleans up the directory based on the command-line arguments provided.
+Certainly! Here's a README template for your program:
+
+---
+
+# Video Splitting/Concatenation Utility
+
+This Python script is a utility for splitting or concatenating video files using `ffmpeg`. It provides a command-line interface to specify the start time for trimming, the duration to trim from the end, and whether to keep all output files.
+
+## Usage
+
+```bash
+python video_utility.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files]
+```
+
+### Options
+
+- `--from FROM_TS`: Trim output starting at the given timestamp (HH:MM:SS).
+- `--trim-end TRIM_END_SECS`: Specify the number of seconds to trim off the end of the output file.
+- `--keep-all-files`: Keep all output files. Useful for debugging.
+
+## Installation
+
+1. Install Python (version 3.8 or later) from [python.org](https://www.python.org/downloads/).
+
+2. Download and install `ffmpeg` from [ffmpeg.org](https://ffmpeg.org/download.html) and add it to your system's PATH.
+
+## Example
+
+Concatenate video files in the current directory that match the pattern `join\d+__.*\.mp4`:
+```bash
+python concat.py
+```
+
+Trim the output video starting from 10 seconds and remove 5 seconds from the end:
+```bash
+python concat.py --from 00:00:10 --trim-end 5
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
