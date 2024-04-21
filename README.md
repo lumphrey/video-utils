@@ -1,7 +1,3 @@
-Certainly! Here's a README template for your program:
-
----
-
 # Video Splitting/Concatenation Utility
 
 This Python script is a utility for splitting or concatenating video files using `ffmpeg`. It provides a command-line interface to specify the start time for trimming, the duration to trim from the end, and whether to keep all output files.
@@ -9,7 +5,7 @@ This Python script is a utility for splitting or concatenating video files using
 ## Usage
 
 ```bash
-python video_utility.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files]
+python concat.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files]
 ```
 
 ### Options
