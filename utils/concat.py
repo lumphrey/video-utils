@@ -2,12 +2,13 @@ import subprocess
 import argparse
 import os
 import re
+import sys
 
 
 def collect_files(directory, pattern):
     """
     Collect files in a directory that match a specified pattern.
-    
+
     Args:
     - directory (str): The directory path to search for files.
     - pattern (str): The regular expression pattern to match filenames.
@@ -24,24 +25,32 @@ def collect_files(directory, pattern):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Video splitting/concat utility.")
-    parser.add_argument('--from', dest="from_ts", type=str, nargs=1, help="Trim output starting at the given timestamp (HH:MM:SS)")
-    parser.add_argument('--trim-end', dest="trim_end_secs", type=str, nargs=1, help="Specify the number of seconds to trim off the end of the output file.")
-    parser.add_argument('--keep-all-files', action='store_true', help='Keeps all output files. Useful for debugging.')
+    parser = argparse.ArgumentParser(
+        description="Video splitting/concat utility.")
+    parser.add_argument('--from', dest="from_ts", type=str, nargs=1,
+                        help="Trim output starting at the given timestamp (HH:MM:SS)")
+    parser.add_argument('--trim-end', dest="trim_end_secs", type=str, nargs=1,
+                        help="Specify the number of seconds to trim off the end of the output file.")
+    parser.add_argument('--keep-all-files', action='store_true',
+                        help='Keeps all output files. Useful for debugging.')
     args = parser.parse_args()
 
     files = collect_files(directory='.', pattern=r"join\d+__.*\.mp4")
+    if len(files) == 0:
+        print("No files were processed.")
+        sys.exit(0)
+
     with open("join.txt", "w") as join_txt:
         for filename in files:
             print("Found " + filename)
             join_txt.write(f"file '{filename}'\n")
-    
+
     # Concatenate video files using ffmpeg
     ffmpeg_cmd = [
         "ffmpeg",
         "-f", "concat",
         "-safe", "0",
-        "-i", os.path.join(".", "join.txt"),
+        "-i", f"{os.path.join('.', 'join.txt')}",
         "-c", "copy", "output.mp4"
     ]
 
@@ -52,11 +61,11 @@ def main():
     if args.from_ts:
         from_ts = args.from_ts[0]
 
-
-        trim_cmd = ["ffmpeg", "-ss", from_ts, "-i", "output.mp4", "-c", "copy", "output_trimmed.mp4"]
+        trim_cmd = ["ffmpeg", "-ss", from_ts, "-i",
+                    "output.mp4", "-c", "copy", "output_trimmed.mp4"]
         if args.trim_end_secs:
             duration_run = subprocess.run([
-                "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", 
+                "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
                 "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             duration = float(duration_run.stdout)
@@ -81,8 +90,6 @@ def main():
 
     else:
         print(f"Return code: {return_code}")
-        if len(files) == 0:
-            print("No files were processed.")
 
 
 if __name__ == "__main__":
