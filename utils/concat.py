@@ -65,7 +65,7 @@ def main():
     if return_code == 0 and trim_cmd_return_code == 0:
         for filename in files:
             os.rename(filename, f"processed_{filename}")
-        if not args.keep_all_files:
+        if not args.keep_all_files and args.from_ts:
             os.remove("output.mp4")
 
     else:
