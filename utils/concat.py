@@ -3,6 +3,8 @@ import argparse
 import os
 import re
 import sys
+import logging
+from utils import __version__
 
 
 def collect_files(directory, pattern):
@@ -18,13 +20,15 @@ def collect_files(directory, pattern):
     """
     regex = re.compile(pattern)
     files = os.listdir(path=directory)
-    print(files)
     filtered_files = [f for f in files if regex.match(f)]
-    print(filtered_files)
+
+    logging.debug(f'Found files in directory: {files}')
+    logging.debug(f'Found files to join: {filtered_files}')
     return filtered_files
 
 
 def main():
+
     parser = argparse.ArgumentParser(
         description="Video splitting/concat utility.")
     parser.add_argument('--from', dest="from_ts", type=str, nargs=1,
@@ -33,16 +37,25 @@ def main():
                         help="Specify the number of seconds to trim off the end of the output file.")
     parser.add_argument('--keep-all-files', action='store_true',
                         help='Keeps all output files. Useful for debugging.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable debug logging.')
     args = parser.parse_args()
+
+    log_level = logging.INFO if not args.debug else logging.DEBUG
+    logging.basicConfig(
+        level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    logging.info(f'Running version {__version__}')
 
     files = collect_files(directory='.', pattern=r"join\d+__.*\.mp4")
     if len(files) == 0:
-        print("No files were processed.")
+        logging.warning("No files were processed.")
         sys.exit(0)
 
     with open("join.txt", "w") as join_txt:
         for filename in files:
             print("Found " + filename)
+            logging.info(f'Adding {filename} to the process queue.')
             join_txt.write(f"file '{filename}'\n")
 
     # Concatenate video files using ffmpeg
@@ -53,6 +66,7 @@ def main():
         "-i", f"{os.path.join('.', 'join.txt')}",
         "-c", "copy", "output.mp4"
     ]
+    logging.debug(f'Concatenation command args: {ffmpeg_cmd}')
 
     run = subprocess.run(ffmpeg_cmd)
     return_code = run.returncode
@@ -69,13 +83,14 @@ def main():
                 "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             duration = float(duration_run.stdout)
-            print(f"Output duration: {duration}")
+            logging.info(
+                f'Trimming output video. Original output duration: {duration} seconds.')
 
             trim_end_secs = args.trim_end_secs[0]
             trim_cmd_args = ["-to", str(duration - float(trim_end_secs))]
             trim_cmd[3:3] = trim_cmd_args
 
-            print(f"Trim command: {trim_cmd}")
+            logging.debug(f'Trim command args: {trim_cmd}')
 
         run = subprocess.run(trim_cmd)
         trim_cmd_return_code = run.returncode
@@ -89,7 +104,7 @@ def main():
             os.remove("output.mp4")
 
     else:
-        print(f"Return code: {return_code}")
+        logging.error(f'Return code: {return_code}')
 
 
 if __name__ == "__main__":
