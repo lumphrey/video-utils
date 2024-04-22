@@ -5,7 +5,7 @@ This Python script is a utility for splitting or concatenating video files using
 ## Usage
 
 ```bash
-python concat.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files]
+python concat.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files] [--debug]
 ```
 
 ### Options
@@ -13,8 +13,9 @@ python concat.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files]
 - `--from FROM_TS`: Trim output starting at the given timestamp (HH:MM:SS).
 - `--trim-end TRIM_END_SECS`: Specify the number of seconds to trim off the end of the output file.
 - `--keep-all-files`: Keep all output files. Useful for debugging.
+- `--debug`: Enable debug logging.
 
-## Installation
+## Pre-requisites
 
 1. Install Python (version 3.8 or later) from [python.org](https://www.python.org/downloads/).
 
@@ -30,6 +31,12 @@ python concat.py
 Trim the output video starting from 10 seconds and remove 5 seconds from the end:
 ```bash
 python concat.py --from 00:00:10 --trim-end 5
+```
+
+
+## Building
+```bash
+python setup.py sdist bdist
 ```
 
 ## License

@@ -54,7 +54,6 @@ def main():
 
     with open("join.txt", "w") as join_txt:
         for filename in files:
-            print("Found " + filename)
             logging.info(f'Adding {filename} to the process queue.')
             join_txt.write(f"file '{filename}'\n")
 
@@ -83,14 +82,15 @@ def main():
                 "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             duration = float(duration_run.stdout)
-            logging.info(
-                f'Trimming output video. Original output duration: {duration} seconds.')
 
             trim_end_secs = args.trim_end_secs[0]
             trim_cmd_args = ["-to", str(duration - float(trim_end_secs))]
             trim_cmd[3:3] = trim_cmd_args
 
-            logging.debug(f'Trim command args: {trim_cmd}')
+            logging.debug(
+                f'Trimming last {trim_end_secs} seconds from output (originally {duration} seconds). ')
+
+        logging.debug(f'Trim command args: {trim_cmd}')
 
         run = subprocess.run(trim_cmd)
         trim_cmd_return_code = run.returncode
