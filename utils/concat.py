@@ -55,6 +55,49 @@ def write_join_file(join_filename, files):
             join_txt.write(f"file '{filename}'\n")
 
 
+def do_concat(join_filename, output_filename):
+    """
+    Concatenate video files using ffmpeg
+    """
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", f"{os.path.join('.', join_filename)}",
+        "-c", "copy", output_filename
+    ]
+    logging.debug('Concatenation command args: %s', ffmpeg_cmd)
+
+    run = subprocess.run(ffmpeg_cmd, check=False)
+    return_code = run.returncode
+    return return_code
+
+
+def do_trim(video_to_trim, from_ts, trim_end_secs=None):
+    """
+    Trim a video.
+
+    Args:
+        video_to_trim (str): The name of the file to trim.
+        from_ts (str): Video content before this timestamp is cut. HH:MM:SS
+        trim_end_secs (float): Number of seconds from the end of the video to cut.
+    """
+    trim_cmd = ["ffmpeg", "-ss", from_ts, "-i",
+                video_to_trim, "-c", "copy", "output_trimmed.mp4"]
+    if trim_end_secs:
+        duration = get_video_duration_seconds()
+
+        trim_cmd[3:3] = ["-to", str(duration - float(trim_end_secs))]
+
+        logging.debug(
+            'Trimming last %s seconds from output (originally %s seconds).', trim_end_secs, duration)
+
+    logging.debug('Trim command args: %s', trim_cmd)
+
+    run = subprocess.run(trim_cmd, check=False)
+    return run.returncode
+
+
 def main():
     """
     Concatenates video files in the current directory.
@@ -86,51 +129,27 @@ def main():
     join_filename = 'join.txt'
     write_join_file(join_filename, files)
 
-    # Concatenate video files using ffmpeg
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", f"{os.path.join('.', join_filename)}",
-        "-c", "copy", "output.mp4"
-    ]
-    logging.debug('Concatenation command args: %s', ffmpeg_cmd)
-
-    run = subprocess.run(ffmpeg_cmd, check=False)
-    return_code = run.returncode
+    output_filename = 'output.mp4'
+    concat_cmd_return_code = do_concat(join_filename, output_filename)
 
     # trim output if specified
     if args.from_ts:
-        from_ts = args.from_ts[0]
-
-        trim_cmd = ["ffmpeg", "-ss", from_ts, "-i",
-                    "output.mp4", "-c", "copy", "output_trimmed.mp4"]
-        if args.trim_end_secs:
-            duration = get_video_duration_seconds()
-
-            trim_end_secs = args.trim_end_secs[0]
-            trim_cmd[3:3] = ["-to", str(duration - float(trim_end_secs))]
-
-            logging.debug(
-                'Trimming last %s seconds from output (originally %s seconds).', trim_end_secs, duration)
-
-        logging.debug('Trim command args: %s', trim_cmd)
-
-        run = subprocess.run(trim_cmd, check=False)
-        trim_cmd_return_code = run.returncode
+        trim_cmd_return_code = do_trim(output_filename,
+                                       args.from_ts[0],
+                                       float(args.trim_end_secs[0]) if hasattr(args, 'trim_end_secs') and args.trim_end_secs else None)
     else:
         trim_cmd_return_code = 0
 
-    if return_code == 0 and trim_cmd_return_code == 0:
+    if concat_cmd_return_code == 0 and trim_cmd_return_code == 0:
         for filename in files:
             os.rename(filename, f"processed_{filename}")
         if not args.keep_all_files and args.from_ts:
-            os.remove("output.mp4")
+            os.remove(output_filename)
 
         os.remove(join_filename)
 
     else:
-        logging.error('Return code: %s{return_code}', return_code)
+        logging.error('Return code: %s{return_code}', concat_cmd_return_code)
 
 
 if __name__ == "__main__":
