@@ -1,3 +1,8 @@
+"""
+This module is a simple wrapper around ffmpeg. It's main purpose is to simplify the process
+of concatenating video files.
+"""
+
 import subprocess
 import argparse
 import os
@@ -22,12 +27,15 @@ def collect_files(directory, pattern):
     files = os.listdir(path=directory)
     filtered_files = [f for f in files if regex.match(f)]
 
-    logging.debug(f'Found files in directory: {files}')
-    logging.debug(f'Found files to join: {filtered_files}')
+    logging.debug('Found files in directory: %s', files)
+    logging.debug('Found files to join: %s', filtered_files)
     return filtered_files
 
 
 def main():
+    """
+    Concatenates video files in the current directory.
+    """
 
     parser = argparse.ArgumentParser(
         description="Video splitting/concat utility.")
@@ -45,16 +53,16 @@ def main():
     logging.basicConfig(
         level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    logging.info(f'Running version {__version__}')
+    logging.info('Running version %s', __version__)
 
     files = collect_files(directory='.', pattern=r"join\d+__.*\.mp4")
     if len(files) == 0:
         logging.warning("No files were processed.")
         sys.exit(0)
 
-    with open("join.txt", "w") as join_txt:
+    with open("join.txt", "w", encoding='UTF8') as join_txt:
         for filename in files:
-            logging.info(f'Adding {filename} to the process queue.')
+            logging.info('Adding %s to the process queue.', filename)
             join_txt.write(f"file '{filename}'\n")
 
     # Concatenate video files using ffmpeg
@@ -65,9 +73,9 @@ def main():
         "-i", f"{os.path.join('.', 'join.txt')}",
         "-c", "copy", "output.mp4"
     ]
-    logging.debug(f'Concatenation command args: {ffmpeg_cmd}')
+    logging.debug('Concatenation command args: %s', ffmpeg_cmd)
 
-    run = subprocess.run(ffmpeg_cmd)
+    run = subprocess.run(ffmpeg_cmd, check=False)
     return_code = run.returncode
 
     # trim output if specified
@@ -79,20 +87,19 @@ def main():
         if args.trim_end_secs:
             duration_run = subprocess.run([
                 "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
-                "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
 
             duration = float(duration_run.stdout)
 
             trim_end_secs = args.trim_end_secs[0]
-            trim_cmd_args = ["-to", str(duration - float(trim_end_secs))]
-            trim_cmd[3:3] = trim_cmd_args
+            trim_cmd[3:3] = ["-to", str(duration - float(trim_end_secs))]
 
             logging.debug(
-                f'Trimming last {trim_end_secs} seconds from output (originally {duration} seconds). ')
+                'Trimming last %s seconds from output (originally %s seconds).', trim_end_secs, duration)
 
-        logging.debug(f'Trim command args: {trim_cmd}')
+        logging.debug('Trim command args: %s', trim_cmd)
 
-        run = subprocess.run(trim_cmd)
+        run = subprocess.run(trim_cmd, check=False)
         trim_cmd_return_code = run.returncode
     else:
         trim_cmd_return_code = 0
@@ -104,7 +111,7 @@ def main():
             os.remove("output.mp4")
 
     else:
-        logging.error(f'Return code: {return_code}')
+        logging.error('Return code: %s{return_code}', return_code)
 
 
 if __name__ == "__main__":
