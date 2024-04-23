@@ -32,6 +32,29 @@ def collect_files(directory, pattern):
     return filtered_files
 
 
+def get_video_duration_seconds():
+    """
+    Uses `ffprobe` to retrieve the duration of the output file.
+    """
+    duration_run = subprocess.run([
+        "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+        "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+
+    duration = float(duration_run.stdout)
+    return duration
+
+
+def write_join_file(join_filename, files):
+    """
+    Writes filenames to a text file which ffmpeg uses to determine which video files to
+    concatenate.
+    """
+    with open(join_filename, "w", encoding='UTF8') as join_txt:
+        for filename in files:
+            logging.info('Adding %s to the process queue.', filename)
+            join_txt.write(f"file '{filename}'\n")
+
+
 def main():
     """
     Concatenates video files in the current directory.
@@ -60,17 +83,15 @@ def main():
         logging.warning("No files were processed.")
         sys.exit(0)
 
-    with open("join.txt", "w", encoding='UTF8') as join_txt:
-        for filename in files:
-            logging.info('Adding %s to the process queue.', filename)
-            join_txt.write(f"file '{filename}'\n")
+    join_filename = 'join.txt'
+    write_join_file(join_filename, files)
 
     # Concatenate video files using ffmpeg
     ffmpeg_cmd = [
         "ffmpeg",
         "-f", "concat",
         "-safe", "0",
-        "-i", f"{os.path.join('.', 'join.txt')}",
+        "-i", f"{os.path.join('.', join_filename)}",
         "-c", "copy", "output.mp4"
     ]
     logging.debug('Concatenation command args: %s', ffmpeg_cmd)
@@ -85,11 +106,7 @@ def main():
         trim_cmd = ["ffmpeg", "-ss", from_ts, "-i",
                     "output.mp4", "-c", "copy", "output_trimmed.mp4"]
         if args.trim_end_secs:
-            duration_run = subprocess.run([
-                "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
-                "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-
-            duration = float(duration_run.stdout)
+            duration = get_video_duration_seconds()
 
             trim_end_secs = args.trim_end_secs[0]
             trim_cmd[3:3] = ["-to", str(duration - float(trim_end_secs))]
@@ -109,6 +126,8 @@ def main():
             os.rename(filename, f"processed_{filename}")
         if not args.keep_all_files and args.from_ts:
             os.remove("output.mp4")
+
+        os.remove(join_filename)
 
     else:
         logging.error('Return code: %s{return_code}', return_code)
