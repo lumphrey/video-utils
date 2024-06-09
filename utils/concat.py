@@ -4,11 +4,11 @@ of concatenating video files.
 """
 
 import subprocess
-import argparse
 import os
 import re
 import sys
 import logging
+import click
 from utils import __version__
 
 
@@ -84,7 +84,7 @@ def do_concat(join_filename, output_filename):
     return return_code
 
 
-def do_trim(video_to_trim, from_ts, trim_end_secs=None):
+def do_trim_from_end(video_to_trim, from_ts, trim_end_secs=None):
     """
     Trim a video.
 
@@ -109,24 +109,21 @@ def do_trim(video_to_trim, from_ts, trim_end_secs=None):
     return run.returncode
 
 
-def main():
+@click.command()
+@click.version_option(version=__version__)
+@click.option('--from', 'from_ts', type=str,
+              help="Trim output starting at the given timestamp (HH:MM:SS)")
+@click.option('--trim-end', 'trim_end_secs', type=int,
+              help="Specify the number of seconds to trim off the end of the output file.")
+@click.option('--keep-all-files', is_flag=True,
+              help='Keeps all output files. Useful for debugging.')
+@click.option('--debug', is_flag=True, help='Enable debug logging.')
+def main(from_ts, trim_end_secs, keep_all_files, debug):
     """
     Concatenates video files in the current directory.
     """
 
-    parser = argparse.ArgumentParser(
-        description="Video splitting/concat utility.")
-    parser.add_argument('--from', dest="from_ts", type=str, nargs=1,
-                        help="Trim output starting at the given timestamp (HH:MM:SS)")
-    parser.add_argument('--trim-end', dest="trim_end_secs", type=str, nargs=1,
-                        help="Specify the number of seconds to trim off the end of the output file.")
-    parser.add_argument('--keep-all-files', action='store_true',
-                        help='Keeps all output files. Useful for debugging.')
-    parser.add_argument('--debug', action='store_true',
-                        help='Enable debug logging.')
-    args = parser.parse_args()
-
-    log_level = logging.INFO if not args.debug else logging.DEBUG
+    log_level = logging.INFO if not debug else logging.DEBUG
     logging.basicConfig(
         level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -144,17 +141,17 @@ def main():
     concat_cmd_return_code = do_concat(join_filename, output_filename)
 
     # trim output if specified
-    if args.from_ts:
-        trim_cmd_return_code = do_trim(output_filename,
-                                       args.from_ts[0],
-                                       float(args.trim_end_secs[0]) if hasattr(args, 'trim_end_secs') and args.trim_end_secs else None)
+    if from_ts:
+        trim_cmd_return_code = do_trim_from_end(output_filename,
+                                       from_ts,
+                                       float(trim_end_secs) if trim_end_secs else None)
     else:
         trim_cmd_return_code = 0
 
     if concat_cmd_return_code == 0 and trim_cmd_return_code == 0:
         for filename in files:
             os.rename(filename, f"processed_{filename}")
-        if not args.keep_all_files and args.from_ts:
+        if not keep_all_files and from_ts:
             os.remove(output_filename)
 
         os.remove(join_filename)
@@ -164,4 +161,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # pylint: disable=no-value-for-parameter
     main()
