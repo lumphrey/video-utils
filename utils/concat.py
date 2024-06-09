@@ -9,6 +9,7 @@ import re
 import sys
 import logging
 import click
+import yaml
 from utils import __version__
 
 
@@ -109,6 +110,27 @@ def do_trim_from_end(video_to_trim, from_ts, trim_end_secs=None):
     return run.returncode
 
 
+def write_yaml(data, filename):
+    with open(filename, 'w', encoding='UTF8') as file:
+        yaml.dump(data, file, sort_keys=False, default_flow_style=False)
+
+
+def read_yaml(filename):
+    with open(filename, 'r', encoding='UTF8') as config_file:
+        config_dict = yaml.safe_load(config_file)
+    return config_dict
+
+
+def print_config(config_dict):
+    for file_key, file_info in config_dict['files'].items():
+        logging.info('File %s', file_key)
+        logging.info('    Name: %s', file_info['name'])
+        if 'start' in file_info:
+            logging.info('    Start: %s', file_info['start'])
+        if 'end' in file_info:
+            logging.info('    End: %s', file_info['end'])
+
+
 @click.command()
 @click.version_option(version=__version__)
 @click.option('--from', 'from_ts', type=str,
@@ -118,11 +140,12 @@ def do_trim_from_end(video_to_trim, from_ts, trim_end_secs=None):
 @click.option('--keep-all-files', is_flag=True,
               help='Keeps all output files. Useful for debugging.')
 @click.option('--debug', is_flag=True, help='Enable debug logging.')
-def main(from_ts, trim_end_secs, keep_all_files, debug):
+@click.option('--generate-config', 'generate_config', is_flag=True)
+@click.option('--use-config', 'use_config', is_flag=True)
+def main(from_ts, trim_end_secs, keep_all_files, generate_config, use_config, debug):
     """
     Concatenates video files in the current directory.
     """
-
     log_level = logging.INFO if not debug else logging.DEBUG
     logging.basicConfig(
         level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -130,6 +153,25 @@ def main(from_ts, trim_end_secs, keep_all_files, debug):
     logging.info('Running version %s', __version__)
 
     files = collect_files(directory='.', pattern=r"join\d+__.*\.mp4")
+    if generate_config:
+        yaml_dict = {
+            'codec': 'hevc_nvenc',
+            'files': {
+                index: {'name': filename} for index, filename in enumerate(files)
+            }
+        }
+        write_yaml(yaml_dict, 'concat_config.yml')
+        return
+
+    if use_config:
+        config_dict = read_yaml('concat_config.yml')
+        logging.info("Read config file, contents:")
+        logging.info(config_dict)
+
+        os.makedirs('concat', exist_ok=True)
+        print_config(config_dict)
+        return
+
     if len(files) == 0:
         logging.warning("No files were processed.")
         sys.exit(0)
@@ -143,8 +185,8 @@ def main(from_ts, trim_end_secs, keep_all_files, debug):
     # trim output if specified
     if from_ts:
         trim_cmd_return_code = do_trim_from_end(output_filename,
-                                       from_ts,
-                                       float(trim_end_secs) if trim_end_secs else None)
+                                                from_ts,
+                                                float(trim_end_secs) if trim_end_secs else None)
     else:
         trim_cmd_return_code = 0
 
