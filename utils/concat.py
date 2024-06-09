@@ -64,7 +64,18 @@ def do_concat(join_filename, output_filename):
         "-f", "concat",
         "-safe", "0",
         "-i", f"{os.path.join('.', join_filename)}",
-        "-c", "copy", output_filename
+        "-vf", "select=concatdec_select",
+        "-af", "aselect=concatdec_select,aresample=async=1",
+        "-c:a", "aac",
+        "-c:v", "hevc_nvenc",  # nvidia nvenc h265 encoder
+        "-tag:v", "hvc1",
+        "-cq", "0",
+        "-profile:v", "main10",
+        "-b:v", "50M",
+        "-maxrate", "50M",
+        "-bufsize", "100M",
+        # "-c", "copy",
+        output_filename
     ]
     logging.debug('Concatenation command args: %s', ffmpeg_cmd)
 
