@@ -13,6 +13,16 @@ import yaml
 from utils import __version__
 
 
+class FileInfo:
+    def __init__(self, filename, start_ts, end_ts):
+        self.filename = filename
+        self.start_ts = start_ts
+        self.end_ts = end_ts
+        self.filename_without_extension, self.extension = os.path.splitext(
+            self.filename)
+        self.is_trimmed = False
+
+
 def collect_files(directory, pattern):
     """
     Collect files in a directory that match a specified pattern.
@@ -85,6 +95,22 @@ def do_concat(join_filename, output_filename):
     return return_code
 
 
+def do_trim(file_info: FileInfo, output_name,):
+    trim_cmd = ["ffmpeg",
+                "-loglevel", "warning",
+                "-ss", file_info.start_ts,
+                "-i", file_info.filename,
+                "-c", "copy", output_name]
+
+    if file_info.end_ts:
+        trim_cmd[3:3] = ["-to", file_info.end_ts]
+
+    logging.debug('Trim command args: %s', trim_cmd)
+    run = subprocess.run(trim_cmd, check=True)
+    file_info.is_trimmed = True
+    return run.returncode
+
+
 def do_trim_from_end(video_to_trim, from_ts, trim_end_secs=None):
     """
     Trim a video.
@@ -121,14 +147,28 @@ def read_yaml(filename):
     return config_dict
 
 
-def print_config(config_dict):
-    for file_key, file_info in config_dict['files'].items():
+def process_config(config_dict):
+    file_list = []
+
+    for file_key, file_config in config_dict['files'].items():
+        file_info = FileInfo(
+            filename=file_config['name'],
+            start_ts=file_config.get('start'),
+            end_ts=file_config.get('end')
+        )
+
         logging.info('File %s', file_key)
-        logging.info('    Name: %s', file_info['name'])
-        if 'start' in file_info:
-            logging.info('    Start: %s', file_info['start'])
-        if 'end' in file_info:
-            logging.info('    End: %s', file_info['end'])
+        logging.info('    Name: %s', file_info.filename)
+        logging.info('    Start: %s', file_info.start_ts)
+        logging.info('    End: %s', file_info.end_ts)
+
+        if file_info.start_ts or file_info.end_ts:
+            do_trim(
+                file_info, f"{file_info.filename_without_extension}_trimmed.{file_info.extension}")
+
+        logging.info('Trimmed? %s', file_info.is_trimmed)
+
+        file_list.append(file_info)
 
 
 @click.command()
@@ -169,7 +209,7 @@ def main(from_ts, trim_end_secs, keep_all_files, generate_config, use_config, de
         logging.info(config_dict)
 
         os.makedirs('concat', exist_ok=True)
-        print_config(config_dict)
+        process_config(config_dict)
         return
 
     if len(files) == 0:
