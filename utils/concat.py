@@ -6,7 +6,6 @@ of concatenating video files.
 import subprocess
 import os
 import re
-import sys
 import logging
 import click
 import yaml
@@ -261,16 +260,10 @@ def process_config(config_dict):
 
 @click.command()
 @click.version_option(version=__version__)
-@click.option('--from', 'from_ts', type=str,
-              help="Trim output starting at the given timestamp (HH:MM:SS)")
-@click.option('--trim-end', 'trim_end_secs', type=int,
-              help="Specify the number of seconds to trim off the end of the output file.")
-@click.option('--keep-all-files', is_flag=True,
-              help='Keeps all output files. Useful for debugging.')
 @click.option('--debug', is_flag=True, help='Enable debug logging.')
 @click.option('--generate-config', 'generate_config', is_flag=True)
 @click.option('--use-config', 'use_config', is_flag=True)
-def main(from_ts, trim_end_secs, keep_all_files, generate_config, use_config, debug):
+def main(generate_config, use_config, debug):
     """
     Concatenates video files in the current directory.
     """
@@ -299,35 +292,6 @@ def main(from_ts, trim_end_secs, keep_all_files, generate_config, use_config, de
         os.makedirs('concat', exist_ok=True)
         process_config(config_dict)
         return
-
-    if len(files) == 0:
-        logging.warning("No files were processed.")
-        sys.exit(0)
-
-    join_filename = 'join.txt'
-    write_join_file(join_filename, files)
-
-    output_filename = 'output.mp4'
-    concat_cmd_return_code = do_concat(join_filename, output_filename)
-
-    # trim output if specified
-    if from_ts:
-        trim_cmd_return_code = do_trim_from_end(output_filename,
-                                                from_ts,
-                                                float(trim_end_secs) if trim_end_secs else None)
-    else:
-        trim_cmd_return_code = 0
-
-    if concat_cmd_return_code == 0 and trim_cmd_return_code == 0:
-        for filename in files:
-            os.rename(filename, f"processed_{filename}")
-        if not keep_all_files and from_ts:
-            os.remove(output_filename)
-
-        os.remove(join_filename)
-
-    else:
-        logging.error('Return code: %s{return_code}', concat_cmd_return_code)
 
 
 if __name__ == "__main__":

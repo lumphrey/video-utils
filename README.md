@@ -1,44 +1,108 @@
-# Video Splitting/Concatenation Utility
+# FFmpeg Video Processing Wrapper
 
-This Python script is a utility for splitting or concatenating video files using `ffmpeg`. It provides a command-line interface to specify the start time for trimming, the duration to trim from the end, and whether to keep all output files.
+This module is a simple wrapper around FFmpeg. Its main purpose is to simplify the process of trimming and concatenating video files. It includes functionalities to handle video file information, collect video files based on patterns, trim videos, concatenate videos, and manage configuration through YAML files.
+
+## Features
+
+- **FileInfo Class**: Represents a video file and its intended processing tasks, such as trimming.
+- **Video Trimming**: Trim videos based on start and end timestamps.
+- **Video Concatenation**: Concatenate multiple video files into a single output file.
+- **Configuration Management**: Generate and read YAML configuration files for batch processing.
+
+## Installation
+
+To use this module, ensure you have FFmpeg installed on your system. You can download it from the [official FFmpeg website](https://ffmpeg.org/download.html).
 
 ## Usage
 
-```bash
-python concat.py [--from FROM_TS] [--trim-end TRIM_END_SECS] [--keep-all-files] [--debug]
+### FileInfo Class
+
+The `FileInfo` class holds information about a video file, including its name, start and end timestamps for trimming, and methods for generating trimmed filenames.
+
+### Trimming Videos
+
+To trim a video, use the `do_trim` function. It takes a `FileInfo` object and an output filename, trimming the video based on the start and end timestamps.
+
+Example:
+```python
+file_info = FileInfo("video.mp4", "00:00:10", "00:00:20")
+return_code = do_trim(file_info, "trimmed_video.mp4")
+if return_code == 0:
+    print("Trimming successful")
 ```
 
-### Options
+### Concatenating Videos
 
-- `--from FROM_TS`: Trim output starting at the given timestamp (HH:MM:SS).
-- `--trim-end TRIM_END_SECS`: Specify the number of seconds to trim off the end of the output file.
-- `--keep-all-files`: Keep all output files. Useful for debugging.
+To concatenate multiple video files, use the `do_concat` function. It reads filenames from a join file and concatenates them using FFmpeg.
+
+Example:
+```python
+write_join_file("join.txt", ["video1.mp4", "video2.mp4"])
+do_concat("join.txt", "output.mp4")
+```
+
+### Configuration Management
+
+Generate a configuration file with details of the videos to process, or read an existing configuration file to process videos as specified.
+
+Example configuration (`concat_config.yml`):
+```yaml
+codec: hevc_nvenc
+files:
+  file1:
+    name: video1.mp4
+    start: 00:00:10
+    end: 00:00:20
+  file2:
+    name: video2.mp4
+```
+
+### Main Script
+
+The main script provides command-line options to generate or use a configuration file for video processing.
+
+Usage:
+```bash
+python main.py --generate-config  # Generates a config file with the current directory's video files
+python main.py --use-config       # Processes videos based on the generated config file
+```
+
+### CLI Options
+
 - `--debug`: Enable debug logging.
+- `--generate-config`: Generate a configuration file based on the current directory's video files.
+- `--use-config`: Use an existing configuration file to process videos.
 
-## Pre-requisites
+### Example
 
-1. Install Python (version 3.8 or later) from [python.org](https://www.python.org/downloads/).
-
-2. Download and install `ffmpeg` from [ffmpeg.org](https://ffmpeg.org/download.html) and add it to your system's PATH.
-
-## Example
-
-Concatenate video files in the current directory that match the pattern `join\d+__.*\.mp4`:
+To run the main script with debug logging enabled:
 ```bash
-python concat.py
+python main.py --debug
 ```
 
-Trim the output video starting from 10 seconds and remove 5 seconds from the end:
+To generate a configuration file:
 ```bash
-python concat.py --from 00:00:10 --trim-end 5
+python main.py --generate-config
 ```
 
-
-## Building
+To process videos using an existing configuration file:
 ```bash
-python setup.py sdist bdist
+python main.py --use-config
 ```
+
+## Development
+
+### Building
+`python setup.py sdist bdist`
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This module is licensed under the MIT License.
+
+## Contributing
+
+Contributions are welcome! Please submit issues and pull requests for any improvements or bug fixes.
+
+## Acknowledgments
+
+- [FFmpeg](https://ffmpeg.org/) for the powerful multimedia processing tools.
