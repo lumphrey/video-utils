@@ -22,6 +22,9 @@ class FileInfo:
             self.filename)
         self.is_trimmed = False
 
+    def trimmed_video_filename(self):
+        return self.filename_without_extension + "_trimmed." + self.extension
+
 
 def collect_files(directory, pattern):
     """
@@ -162,13 +165,17 @@ def process_config(config_dict):
         logging.info('    Start: %s', file_info.start_ts)
         logging.info('    End: %s', file_info.end_ts)
 
+        # trim files if required
         if file_info.start_ts or file_info.end_ts:
-            do_trim(
-                file_info, f"{file_info.filename_without_extension}_trimmed.{file_info.extension}")
+            do_trim(file_info, file_info.trimmed_video_filename())
+            file_list.append(file_info.trimmed_video_filename())
+        else:
+            file_list.append(file_info.filename)
 
-        logging.info('Trimmed? %s', file_info.is_trimmed)
-
-        file_list.append(file_info)
+        # concatenate video files
+        if(len(file_list) > 1):
+            write_join_file("join.txt", file_list)
+            do_concat("join.txt", "output.mp4")
 
 
 @click.command()
