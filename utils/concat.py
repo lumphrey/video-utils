@@ -14,6 +14,21 @@ from utils import __version__
 
 
 class FileInfo:
+    """
+    This class exposes attributes describing intended processing tasks for a video file.
+
+    Attributes:
+        filename (str): The name of the video file including its extension.
+        start_ts (str): The starting timestamp (HH:MM:SS.ss) for the intended video processing task.
+        end_ts (str): The ending timestamp (HH:MM:SS.ss) for the intended video processing task.
+        filename_without_extension (str): The name of the video file without its extension.
+        extension (str): The extension of the video file.
+        is_trimmed (bool): A flag indicating whether the video has been trimmed.
+
+    Methods:
+        trimmed_video_filename(): Generates the filename for the trimmed video.
+    """
+
     def __init__(self, filename, start_ts, end_ts):
         self.filename = filename
         self.start_ts = start_ts
@@ -23,6 +38,12 @@ class FileInfo:
         self.is_trimmed = False
 
     def trimmed_video_filename(self):
+        """
+        Generates the filename for the trimmed video.
+
+        Returns:
+            str: The filename for the trimmed video, appending '_trimmed' before the file extension.
+        """
         return self.filename_without_extension + "_trimmed." + self.extension
 
 
@@ -51,8 +72,11 @@ def get_video_duration_seconds():
     Uses `ffprobe` to retrieve the duration of the output file.
     """
     duration_run = subprocess.run([
-        "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
-        "default=noprint_wrappers=1:nokey=1", "output.mp4"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration", "-of",
+        "default=noprint_wrappers=1:nokey=1", "output.mp4"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
 
     duration = float(duration_run.stdout)
     return duration
@@ -99,6 +123,26 @@ def do_concat(join_filename, output_filename):
 
 
 def do_trim(file_info: FileInfo, output_name,):
+    """
+    Trims a video file based on the start and end timestamps provided in the FileInfo object.
+
+    Args:
+        file_info (FileInfo): An instance of the FileInfo class containing the video file 
+                              information and the start and end timestamps for trimming.
+        output_name (str): The name of the output file for the trimmed video.
+
+    Returns:
+        int: The return code from the subprocess running the ffmpeg trim command.
+
+    Raises:
+        subprocess.CalledProcessError: If the ffmpeg command returns a non-zero exit status.
+
+    Example:
+        file_info = FileInfo("video.mp4", 10.0, 20.0)
+        return_code = do_trim(file_info, "trimmed_video.mp4")
+        if return_code == 0:
+            print("Trimming successful")
+    """
     trim_cmd = ["ffmpeg",
                 "-loglevel", "warning",
                 "-ss", file_info.start_ts,
@@ -151,6 +195,43 @@ def read_yaml(filename):
 
 
 def process_config(config_dict):
+    """
+    Processes a configuration dictionary to trim and concatenate video files as specified.
+
+    Args:
+        config_dict (dict): A dictionary containing the configuration for processing video files.
+                            It should have a 'files' key with file configurations.
+
+    Example structure of `config_dict`:
+        {
+            "files": {
+                "file1": {
+                    "name": "video1.mp4",
+                    "start": "00:00:00",
+                    "end": "00:07:21" 
+                },
+                "file2": {
+                    "name": "video2.mp4"
+                }
+            }
+        }
+
+    The function performs the following tasks:
+        1. Iterates over each file configuration in `config_dict['files']`.
+        2. Creates a FileInfo object for each file.
+        3. Logs the file details.
+        4. Trims the file if start or end timestamps are specified.
+        5. Appends the trimmed or original filename to the file list.
+        6. Concatenates the files if there are more than one in the file list.
+
+    Logging:
+        Logs the details of each file and the trimming process.
+
+    Calls:
+        do_trim(file_info, output_name): Trims the video file if required.
+        write_join_file("join.txt", file_list): Writes the filenames to a join file for concatenation.
+        do_concat("join.txt", "output.mp4"): Concatenates the video files into a single output file.
+    """
     file_list = []
 
     for file_key, file_config in config_dict['files'].items():
@@ -173,7 +254,7 @@ def process_config(config_dict):
             file_list.append(file_info.filename)
 
         # concatenate video files
-        if(len(file_list) > 1):
+        if len(file_list) > 1:
             write_join_file("join.txt", file_list)
             do_concat("join.txt", "output.mp4")
 
