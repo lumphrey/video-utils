@@ -43,7 +43,7 @@ class FileInfo:
         Returns:
             str: The filename for the trimmed video, appending '_trimmed' before the file extension.
         """
-        return self.filename_without_extension + "_trimmed." + self.extension
+        return self.filename_without_extension + "_trimmed" + self.extension
 
 
 def collect_files(directory, pattern):
@@ -144,7 +144,7 @@ def do_trim(file_info: FileInfo, output_name,):
     """
     trim_cmd = ["ffmpeg",
                 "-loglevel", "warning",
-                "-ss", file_info.start_ts,
+                "-ss", file_info.start_ts if file_info.start_ts else "00:00:00",
                 "-i", file_info.filename,
                 "-c", "copy", output_name]
 
@@ -253,9 +253,9 @@ def process_config(config_dict):
             file_list.append(file_info.filename)
 
         # concatenate video files
-        if len(file_list) > 1:
-            write_join_file("join.txt", file_list)
-            do_concat("join.txt", "output.mp4")
+    if len(file_list) > 1:
+        write_join_file("join.txt", file_list)
+        do_concat("join.txt", "output.mp4")
 
 
 @click.command()
@@ -273,7 +273,7 @@ def main(generate_config, use_config, debug):
 
     logging.info('Running version %s', __version__)
 
-    files = collect_files(directory='.', pattern=r"join\d+__.*\.mp4")
+    files = collect_files(directory='.', pattern=r".*\.mp4")
     if generate_config:
         yaml_dict = {
             'codec': 'hevc_nvenc',
