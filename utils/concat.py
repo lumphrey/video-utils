@@ -92,15 +92,11 @@ def write_join_file(join_filename, files):
             join_txt.write(f"file '{filename}'\n")
 
 
-def do_concat(join_filename, output_filename):
+def do_concat(join_filename, output_filename, skip_encode=False):
     """
     Concatenate video files using ffmpeg
     """
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", f"{os.path.join('.', join_filename)}",
+    ffmpeg_encode_args = [
         "-vf", "select=concatdec_select",
         "-af", "aselect=concatdec_select,aresample=async=1",
         "-c:a", "aac",
@@ -111,9 +107,26 @@ def do_concat(join_filename, output_filename):
         "-b:v", "70M",
         "-maxrate", "70M",
         "-bufsize", "100M",
-        # "-c", "copy",
         output_filename
     ]
+
+    ffmpeg_no_encode_args = [
+        "-c", "copy",
+        output_filename
+    ]
+
+    ffmpeg_base_cmd = [
+        "ffmpeg",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", f"{os.path.join('.', join_filename)}"
+    ]
+
+    if skip_encode:
+        ffmpeg_cmd = ffmpeg_base_cmd + ffmpeg_no_encode_args
+    else:
+        ffmpeg_cmd = ffmpeg_base_cmd + ffmpeg_encode_args
+
     logging.debug('Concatenation command args: %s', ffmpeg_cmd)
 
     run = subprocess.run(ffmpeg_cmd, check=False)
@@ -193,7 +206,7 @@ def read_yaml(filename):
     return config_dict
 
 
-def process_config(config_dict):
+def process_config(config_dict, skip_encode):
     """
     Processes a configuration dictionary to trim and concatenate video files as specified.
 
@@ -255,7 +268,7 @@ def process_config(config_dict):
         # concatenate video files
     if len(file_list) > 1:
         write_join_file("join.txt", file_list)
-        do_concat("join.txt", "output.mp4")
+        do_concat("join.txt", "output.mp4", skip_encode=skip_encode)
 
 
 @click.command()
@@ -263,7 +276,8 @@ def process_config(config_dict):
 @click.option('--debug', is_flag=True, help='Enable debug logging.')
 @click.option('--generate-config', 'generate_config', is_flag=True)
 @click.option('--use-config', 'use_config', is_flag=True)
-def main(generate_config, use_config, debug):
+@click.option('--skip-encode', 'skip_encode', is_flag=True)
+def main(generate_config, use_config, skip_encode, debug):
     """
     Concatenates video files in the current directory.
     """
@@ -290,7 +304,7 @@ def main(generate_config, use_config, debug):
         logging.info(config_dict)
 
         os.makedirs('concat', exist_ok=True)
-        process_config(config_dict)
+        process_config(config_dict, skip_encode=skip_encode)
         return
 
 
