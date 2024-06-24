@@ -108,8 +108,8 @@ def do_concat(join_filename, output_filename):
         "-tag:v", "hvc1",
         "-cq", "0",
         "-profile:v", "main10",
-        "-b:v", "50M",
-        "-maxrate", "50M",
+        "-b:v", "70M",
+        "-maxrate", "70M",
         "-bufsize", "100M",
         # "-c", "copy",
         output_filename
